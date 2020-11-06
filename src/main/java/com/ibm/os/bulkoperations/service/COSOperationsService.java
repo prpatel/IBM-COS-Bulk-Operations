@@ -23,22 +23,12 @@ public class COSOperationsService {
     private final AmazonS3 s3Client;
 
     @Autowired
+    AsyncOperations asyncOperations;
+
+    @Autowired
     public COSOperationsService(AmazonS3 s3Client) {
         this.s3Client = s3Client;
 
-    }
-
-    @Async
-    public CompletableFuture<Integer> deleteFromBucketWithKeys(String bucketName, List keys) {
-        logger.info( String.format( "START : S3Service -> deleteFromBucketWithKeys() bucketName : %s ", bucketName ));
-        DeleteObjectsRequest multiObjectDeleteRequest = new DeleteObjectsRequest(bucketName)
-                .withKeys(keys)
-                .withQuiet(false);
-
-        DeleteObjectsResult delObjRes = s3Client.deleteObjects(multiObjectDeleteRequest);
-        int successfulDeletes = delObjRes.getDeletedObjects().size();
-        logger.info( String.format( "START : S3Service -> deleteFromBucketWithKeys() deleted : %s ", successfulDeletes ));
-        return  CompletableFuture.completedFuture(Integer.valueOf(successfulDeletes));
     }
 
     public void deleteAllInBucketWithPrefix(String bucketName, String prefix) {
@@ -51,7 +41,7 @@ public class COSOperationsService {
             System.out.println("noOfFiles : "+fileCount);
             List<S3ObjectSummary> summaries = listing.getObjectSummaries();
             fileCount += summaries.size();
-            futures.add(deleteFromBucketWithKeys(bucketName, summaries));
+            futures.add(asyncOperations.deleteFromBucketWithKeys(bucketName, summaries));
             listing = s3Client.listNextBatchOfObjects( listing);
         }
         // if we want to wait for all of them to complete, not sure this is necessary
